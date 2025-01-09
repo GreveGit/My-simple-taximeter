@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taximeter</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e00;
+            color: white;
+            display: none; /* Ocultar por defecto */
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            position: relative;
+        }
+
+        .taximeter {
+            width: 300px;
+            padding: 20px;
+            background: #333;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: absolute; 
+            bottom: 20px; /* Separación desde abajo */
+            right: 20px; /* Separación desde la derecha */
+        }
+
+        .display {
+            width: 100%;
+            height: 100px;
+            background: #222;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .display span {
+            margin: 5px 0;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .button {
+            flex: 1;
+            padding: 10px;
+            margin: 0 5px;
+            background: #444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            text-align: center;
+        }
+
+        .button:hover {
+            background: #555;
+        }
+
+        .button:active {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="taximeter">
+        <div class="display">
+            <span id="fare">Tarifa: $0.00</span>
+            <span id="distance">Distancia: 0.0 km</span>
+        </div>
+        <div class="buttons">
+            <button class="button" id="start">Iniciar</button>
+            <button class="button" id="pause">Pausar</button>
+            <button class="button" id="reset">Reiniciar</button>
+            <button class="button" id="close">Cerrar</button>
+        </div>
+    </div>
+
+    <script>
+        let running = false;
+        let fare = 0.0;
+        let distance = 0.0;
+        const fareRate = 1.5; // Tarifa por kilómetro
+
+        const fareDisplay = document.getElementById('fare');
+        const distanceDisplay = document.getElementById('distance');
+
+        // Iniciar el taxímetro
+        document.getElementById('start').addEventListener('click', () => {
+            if (!running) {
+                running = true;
+                startMeter();
+            }
+        });
+
+        // Pausar el taxímetro
+        document.getElementById('pause').addEventListener('click', () => {
+            running = false;
+        });
+
+        // Reiniciar el taxímetro
+        document.getElementById('reset').addEventListener('click', () => {
+            running = false;
+            fare = 0.0;
+            distance = 0.0;
+            updateDisplay();
+        });
+
+        // Cerrar el NUI
+        document.getElementById('close').addEventListener('click', () => {
+            fetch(`https://${GetParentResourceName()}/close`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=UTF-8',
+                },
+                body: JSON.stringify({})
+            }).then(() => {
+                console.log("NUI cerrado");
+            });
+        });
+
+        // Función para empezar a contar el tiempo del taxímetro
+        function startMeter() {
+            const interval = setInterval(() => {
+                if (!running) {
+                    clearInterval(interval);
+                } else {
+                    distance += 0.1; // Incrementa la distancia cada segundo
+                    fare = distance * fareRate; // Calcula la tarifa
+                    updateDisplay();
+                }
+            }, 1000); // Se actualiza cada segundo
+        }
+
+        // Actualiza la pantalla del taxímetro
+        function updateDisplay() {
+            fareDisplay.innerText = `Tarifa: $${fare.toFixed(2)}`;
+            distanceDisplay.innerText = `Distancia: ${distance.toFixed(1)} km`;
+        }
+
+        // Escuchar mensajes del cliente
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+
+            if (data.type === 'ui') {
+                if (data.status) {
+                    document.body.style.display = "flex"; // Muestra el NUI
+                    SetNuiFocus(false, true); // Desactiva el teclado pero mantiene el control del ratón
+                } else {
+                    document.body.style.display = "none"; // Oculta el NUI
+                    SetNuiFocus(false, false); // Restaura el control total
+                }
+            }
+
+            // Actualiza la interfaz de usuario con los valores de tarifa y distancia
+            if (data.type === 'update') {
+                fareDisplay.innerText = `Tarifa: $${data.fare.toFixed(2)}`;
+                distanceDisplay.innerText = `Distancia: ${data.distance.toFixed(1)} km`;
+            }
+        });
+    </script>
+</body>
+</html>
