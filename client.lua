@@ -7,7 +7,11 @@ local fareRate = 1.5  -- Tarifa por kilómetro
 -- Comando para mostrar/ocultar el taxímetro
 RegisterCommand("taximeter", function()
     display = not display
-    SetNuiFocus(display, display) -- Activa/desactiva el control del mouse y teclado
+    if display then
+        SetNuiFocus(true, true) 
+    else
+        SetNuiFocus(false, false)
+    end
     SendNUIMessage({
         type = "ui",
         status = display -- Envía el estado actual del NUI
